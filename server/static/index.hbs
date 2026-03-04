@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+            name="description"
+            content="A web-based tool for testing and debugging OpenPGP DANE (RFC 7929) OPENPGPKEY DNS records"
+        />
+        <link rel="canonical" href="https://dane.dp42.dev/" />
+        <title>OpenPGP DANE - Tester</title>
+        <style>
+            :root {
+                --bg: #0b0c10;
+                /* deep slate */
+                --panel: #111317;
+                --muted: #8b95a7;
+                --text: #e6edf3;
+                --accent: #6ee7b7;
+                /* mint */
+                --accent-2: #60a5fa;
+                /* soft blue */
+                --warn: #f59e0b;
+                /* amber */
+                --ok: #22c55e;
+                /* green */
+                --border: #1f2430;
+                --code: #0d1117;
+            }
+
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --bg: #f7f9fc;
+                    --panel: #ffffff;
+                    --muted: #5a6579;
+                    --text: #0b1220;
+                    --accent: #059669;
+                    --accent-2: #2563eb;
+                    --warn: #b45309;
+                    --ok: #047857;
+                    --border: #e5e7eb;
+                    --code: #f3f4f6;
+                }
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                height: 100%;
+            }
+
+            body {
+                margin: 0;
+                font-family: monospace;
+                line-height: 1.45;
+                color: var(--text);
+                background: var(--bg);
+            }
+
+            .wrap {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 24px;
+            }
+
+            header {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 16px;
+                align-items: start;
+                margin-bottom: 24px;
+            }
+
+            .title {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .title h1 {
+                margin: 0;
+                font-size: clamp(22px, 3.2vw, 34px);
+                letter-spacing: -0.02em;
+            }
+
+            .subtitle {
+                color: var(--muted);
+                font-size: 14px;
+            }
+
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.04),
+                    rgba(0, 0, 0, 0.04)
+                );
+                font-size: 12px;
+                color: var(--muted);
+            }
+
+            .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--ok);
+                box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+            }
+
+            .panel {
+                background: var(--panel);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 18px;
+                box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+            }
+
+            .grid {
+                display: grid;
+                gap: 16px;
+            }
+
+            .fingerprint {
+                font-size: 14px;
+                letter-spacing: 0.06em;
+                word-break: break-all;
+            }
+
+            @media (min-width: 820px) {
+                .grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .section-title {
+                font-size: 13px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin: 8px 0 14px;
+            }
+
+            .kv {
+                display: grid;
+                grid-template-columns: 140px 1fr;
+                gap: 10px 14px;
+                align-items: start;
+            }
+
+            .k {
+                color: var(--muted);
+                font-size: 13px;
+            }
+
+            .v {
+                background: var(--code);
+                border: 1px dashed var(--border);
+                padding: 8px 10px;
+                border-radius: 10px;
+                overflow: auto;
+            }
+
+            .uri {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .uri a {
+                color: var(--accent-2);
+                text-decoration: none;
+                word-break: break-all;
+            }
+
+            .uri a:hover {
+                text-decoration: underline;
+            }
+
+            .errors {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .pill {
+                font-size: 12px;
+                padding: 6px 10px;
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                color: var(--muted);
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.04),
+                    rgba(0, 0, 0, 0.04)
+                );
+            }
+
+            footer {
+                margin-top: 20px;
+                color: var(--muted);
+                font-size: 12px;
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .note {
+                max-width: 780px;
+            }
+
+            form.lookup {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            input[type="email"] {
+                height: 38px;
+                font-size: 16px;
+                border-radius: 10px;
+                padding: 0 12px;
+                border: 1px solid var(--border);
+                background: var(--panel);
+                color: var(--text);
+            }
+
+            input[type="email"]::placeholder {
+                color: var(--muted);
+            }
+
+            input[type="submit"] {
+                height: 38px;
+                font-size: 15px;
+                font-weight: 600;
+                border-radius: 999px;
+                padding: 0 16px;
+                border: 1px solid var(--border);
+                background: linear-gradient(
+                    180deg,
+                    rgba(110, 231, 183, 0.18),
+                    rgba(96, 165, 250, 0.18)
+                );
+                color: var(--text);
+                cursor: pointer;
+            }
+
+            input[type="submit"]:hover {
+                filter: brightness(1.08);
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="wrap">
+            <header>
+                <div class="title">
+                    <h1>OpenPGP DANE - Tester</h1>
+                </div>
+            </header>
+            <section class="panel">
+                <div style="color: var(--muted); font-size: 14px">
+                    <p>
+                        <a
+                            href="https://datatracker.ietf.org/doc/html/rfc7929"
+                            style="color: var(--accent-2)"
+                            >RFC 7929</a
+                        >
+                        defines a method for storing OpenPGP public keys in DNS
+                        using the OPENPGPKEY resource record (TYPE 61). This
+                        allows key discovery using only DNS, secured by DNSSEC.
+                    </p>
+                    <p>
+                        Given an e-mail address, the DNS name is constructed by:
+                    </p>
+                    <ul>
+                        <li>
+                            Taking the <strong>local-part</strong> of the e-mail
+                            address (left of @) and converting it to
+                            <strong>lowercase</strong>
+                        </li>
+                        <li>
+                            Computing the <strong>SHA-256 hash</strong> and
+                            <strong>truncating</strong> to 28 octets (224 bits)
+                        </li>
+                        <li>
+                            <strong>Hex-encoding</strong> the result (56
+                            characters)
+                        </li>
+                    </ul>
+                    <p>
+                        The final DNS name is:
+                        <br /><code
+                            >&lt;56-char-hex&gt;._openpgpkey.&lt;domain&gt;</code
+                        >
+                        <br />
+                        For example, for <code>hugh@example.com</code>:
+                        <br /><code
+                            >c93f1e400f26708f98cb19d936620da35eec8f72e57f9eec01c1afd6._openpgpkey.example.com</code
+                        >
+                    </p>
+                    <p>
+                        The RDATA of the OPENPGPKEY record contains the binary
+                        OpenPGP Transferable Public Key. DNSSEC validation is
+                        required for trust.
+                    </p>
+                </div>
+            </section>
+            <section class="panel" style="margin-top: 16px">
+                <h2 class="section-title">Lookup</h2>
+                <p class="subtitle">
+                    For testing purposes, you can use the following form to look
+                    up OPENPGPKEY DNS records for a given e-mail address:
+                </p>
+                <form class="lookup" action="/" method="get">
+                    <label for="email" style="color: var(--muted)"
+                        >E&#8209;mail address</label
+                    >
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="name@example.org"
+                        required
+                    />
+                    <input type="submit" value="Lookup" />
+                </form>
+                {{#if this.data}} {{#with this.data}}
+                <h3 style="margin: 14px 0 6px">Results for {{this.user_id}}</h3>
+                <div class="grid">
+                    <section class="panel">
+                        <h4 class="section-title">DANE Lookup</h4>
+                        <div class="kv">
+                            <div class="k">DNS Name</div>
+                            <div class="v">{{this.dns_name}}</div>
+                            <div class="k">Fingerprint</div>
+                            <div class="v fingerprint">
+                                {{this.key.fingerprint}}
+                            </div>
+                            <div class="k">Algorithm</div>
+                            <div class="v">{{this.key.algorithm}}</div>
+                            <div class="k">Revocation</div>
+                            <div class="v">{{this.key.revocation_status}}</div>
+                            <div class="k">Expiry</div>
+                            <div class="v">{{this.key.expiry}}</div>
+                            <div class="k">Randomart</div>
+                            <div class="v">
+                                <pre>{{{this.key.randomart}}}</pre>
+                            </div>
+                            <div class="k">Passed Tests</div>
+                            <div class="v">
+                                {{#if this.successes.[0]}}
+                                <table
+                                    style="
+                                        width: 100%;
+                                        border-collapse: collapse;
+                                        font-size: 12px;
+                                    "
+                                >
+                                    <tbody>
+                                        {{#each this.successes}}
+                                        <tr>
+                                            <td
+                                                style="
+                                                    padding: 6px;
+                                                    border: 1px solid
+                                                        var(--border);
+                                                "
+                                            >
+                                                &#x2705; {{this}}
+                                            </td>
+                                        </tr>
+                                        {{/each}}
+                                    </tbody>
+                                </table>
+                                {{else}}
+                                <div class="errors">
+                                    <span class="pill">No errors</span>
+                                </div>
+                                {{/if}}
+                            </div>
+                            <div class="k">Errors</div>
+                            <div class="v">
+                                {{#if this.errors.[0]}}
+                                <table
+                                    style="
+                                        width: 100%;
+                                        border-collapse: collapse;
+                                        font-size: 12px;
+                                    "
+                                >
+                                    <thead>
+                                        <tr
+                                            style="
+                                                background: var(--code);
+                                                color: var(--muted);
+                                            "
+                                        >
+                                            <th
+                                                style="
+                                                    text-align: left;
+                                                    padding: 6px;
+                                                    border: 1px solid
+                                                        var(--border);
+                                                "
+                                            >
+                                                Error Code
+                                            </th>
+                                            <th
+                                                style="
+                                                    text-align: left;
+                                                    padding: 6px;
+                                                    border: 1px solid
+                                                        var(--border);
+                                                "
+                                            >
+                                                Error Message
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{#each this.errors}}
+                                        <tr>
+                                            <td
+                                                style="
+                                                    padding: 6px;
+                                                    border: 1px solid
+                                                        var(--border);
+                                                "
+                                            >
+                                                {{this.name}}
+                                            </td>
+                                            <td
+                                                style="
+                                                    padding: 6px;
+                                                    border: 1px solid
+                                                        var(--border);
+                                                "
+                                            >
+                                                {{this.message}}
+                                            </td>
+                                        </tr>
+                                        {{/each}}
+                                    </tbody>
+                                </table>
+                                {{else}}
+                                <div class="errors">
+                                    <span class="pill">No errors</span>
+                                </div>
+                                {{/if}}
+                            </div>
+                            <div class="k">Fetch Timestamp</div>
+                            <div class="v">{{this.timestamp}}</div>
+                        </div>
+                    </section>
+                    {{/with}}
+                </div>
+                {{/if}}
+            </section>
+            <section class="panel" style="margin-top: 16px">
+                <h2 class="section-title">API usage</h2>
+                <p class="subtitle">
+                    There is also an API that returns the same results in JSON
+                    format, its endpoint is:
+                    <a
+                        href="{{this.config.root_path}}/api/lookup?email=hugh@example.com"
+                        style="color: var(--accent-2)"
+                        >{{this.config.root_path}}/api/lookup?email=hugh@example.com</a
+                    >
+                </p>
+
+                <p class="subtitle">
+                    You can find the OpenAPI specification and Swagger UI at
+                    <a
+                        href="{{this.config.root_path}}/api-docs/ui/"
+                        style="color: var(--accent-2)"
+                        >{{this.config.root_path}}/api-docs/ui/</a
+                    >
+                </p>
+            </section>
+            <footer style="margin-top: 16px">
+                <p>
+                    Hosted by
+                    <a
+                        href="{{this.config.footer_hoster_url}}"
+                        style="color: var(--accent-2)"
+                        >{{this.config.footer_hoster_name}}</a
+                    >
+                    - Developed by
+                    <a
+                        href="https://chimbosonic.com"
+                        style="color: var(--accent-2)"
+                        >Alexis Lowe</a
+                    >
+                    - Source code available on
+                    <a
+                        href="https://github.com/chimbosonic/dane-tester"
+                        style="color: var(--accent-2)"
+                        >GitHub</a
+                    >
+                </p>
+                <div class="note">
+                    <details>
+                        <summary class="subtitle">
+                            Disclaimer: This server has logging enabled for
+                            debugging and abuse monitoring purposes. Logs are
+                            not shared with third-parties and are stored for 48
+                            hours. Submitted e-mail addresses are only used for
+                            the lookup and not logged.
+                        </summary>
+                        <p>Example of a log on Lookup:</p>
+                        <p>
+                            [2025-09-07T22:11:56Z INFO
+                            actix_web::middleware::logger] 172.19.0.4 "/" 200
+                            9437 "https://dane.dp42.dev/" "Mozilla/5.0
+                            (Macintosh; Intel Mac OS X 10_15_7)
+                            AppleWebKit/537.36 (KHTML, like Gecko)
+                            Chrome/141.0.0.0 Safari/537.36" 1.196103
+                        </p>
+                    </details>
+                </div>
+            </footer>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,19 @@
+[package]
+name = "dane"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hickory-resolver = { version = "0.25", features = ["dnssec-ring", "tokio"] }
+hickory-proto = { version = "0.25", features = ["dnssec-ring"] }
+sha2 = "0.10.9"
+hex = "0.4.3"
+miette = "7.6.0"
+thiserror = "2.0.18"
+tokio = { version = "1.50.0", features = ["full"] }
+url = "2.5.8"
+chrono = "0.4.44"
+tracing = { version = "0.1.44", optional = true }
+
+[features]
+tracing = ["dep:tracing"]

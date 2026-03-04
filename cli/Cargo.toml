@@ -1,0 +1,20 @@
+[package]
+name = "dane-tester-cli"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Alexis Lowe <alexis.lowe@chimbosonic.com>"]
+description = "A CLI tool for testing and debugging OpenPGP DANE (RFC 7929) OPENPGPKEY DNS records"
+keywords = ["cli", "dane", "OpenPGP"]
+
+[[bin]]
+name = "dane-tester"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5.60", features = ["derive"] }
+miette = { version = "7.6.0", features = ["fancy"] }
+dane = { path = "../dane" }
+openpgp-tester-lib = {git = "https://github.com/chimbosonic/openpgp-tester-shared-lib.git"}
+tokio = { version = "1.50.0", features = ["full"] }
+thiserror = "2.0.18"

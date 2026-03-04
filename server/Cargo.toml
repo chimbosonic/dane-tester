@@ -1,0 +1,56 @@
+[package]
+name = "dane-tester-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = { version = "4.13.0", features = ["rustls"] }
+dane = { path = "../dane" }
+openpgp-tester-lib = {git = "https://github.com/chimbosonic/openpgp-tester-shared-lib.git"}
+serde = { version = "1.0.228", features = ["derive"] }
+handlebars = { version = "6.4.0", features = ["dir_source"] }
+env_logger = "0.11.9"
+log = "0.4.29"
+utoipa = { version = "5.4.0", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
+tracing-subscriber = { version = "0.3.22", features = [
+    "env-filter",
+    "fmt",
+], optional = true }
+opentelemetry-otlp = { version = "0.31.0", features = [
+    "grpc-tonic",
+    "metrics",
+], optional = true }
+opentelemetry_sdk = { version = "0.31.0", optional = true }
+opentelemetry = { version = "0.31.0", optional = true }
+tracing-opentelemetry = { version = "0.32.1", optional = true }
+opentelemetry-semantic-conventions = { version = "0.31.0", features = [
+    "semconv_experimental",
+], optional = true }
+tracing-core = { version = "0.1.36", optional = true }
+opentelemetry-stdout = { version = "0.31.0", optional = true }
+tracing = { version = "0.1.44", optional = true }
+chrono = {version = "0.4.44", features = ["serde"]}
+tokio = { version = "1.50.0", features = ["rt"] , optional = true}
+
+
+[dev-dependencies]
+serde_json = "1.0.149"
+tokio = { version = "1.50.0", features = ["full"] }
+
+[features]
+default = ["embed-static","dane-cache"]
+otel = [
+    "dane/tracing",
+    "dep:tracing-subscriber",
+    "dep:opentelemetry-otlp",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry",
+    "dep:tracing-opentelemetry",
+    "dep:opentelemetry-semantic-conventions",
+    "dep:tracing-core",
+    "dep:opentelemetry-stdout",
+    "dep:tracing",
+]
+embed-static = []
+dane-cache = ["dep:tokio"]

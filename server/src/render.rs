@@ -1,0 +1,33 @@
+use actix_web::{HttpResponse, web};
+use handlebars::Handlebars;
+use log::error;
+use serde::Serialize;
+
+use crate::dane_result::DaneResult;
+
+use crate::config::{STATIC_CONTENT_CONFIG, StaticContentConfig};
+
+#[derive(Serialize)]
+struct RenderData<'a, T> {
+    config: StaticContentConfig,
+    data: &'a T,
+}
+
+pub fn render(
+    hb: web::Data<Handlebars<'_>>,
+    page_path: &str,
+    data: &Option<DaneResult>,
+) -> HttpResponse {
+    let render_data = RenderData {
+        config: STATIC_CONTENT_CONFIG.clone(),
+        data,
+    };
+
+    match hb.render(page_path, &render_data) {
+        Ok(body) => HttpResponse::Ok().body(body),
+        Err(err) => {
+            error!("Template rendering error: {err}");
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
