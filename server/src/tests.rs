@@ -30,8 +30,10 @@ async fn test_lookup_not_index() {
 async fn test_lookup_no_email() {
     let handlebars_ref = setup_handlebars();
 
+    let dns_server: web::Data<Option<String>> = web::Data::new(None);
     let app = App::new()
         .app_data(handlebars_ref.clone())
+        .app_data(dns_server)
         .service(lookup)
         .wrap(setup_error_handlers_middleware())
         .wrap(setup_logging_middleware())
@@ -62,8 +64,10 @@ async fn test_lookup_no_email() {
 #[actix_web::test]
 async fn test_lookup_email() {
     let handlebars_ref = setup_handlebars();
+    let dns_server: web::Data<Option<String>> = web::Data::new(None);
     let app = App::new()
         .app_data(handlebars_ref.clone())
+        .app_data(dns_server)
         .service(lookup)
         .wrap(setup_error_handlers_middleware())
         .wrap(setup_logging_middleware())
@@ -111,7 +115,9 @@ async fn test_api_not_found() {
 
 #[actix_web::test]
 async fn test_api_no_email() {
+    let dns_server: web::Data<Option<String>> = web::Data::new(None);
     let app = App::new()
+        .app_data(dns_server)
         .service(api)
         .wrap(setup_error_handlers_middleware())
         .wrap(setup_logging_middleware())
@@ -137,7 +143,9 @@ async fn test_api_no_email() {
 
 #[actix_web::test]
 async fn test_api_email() {
+    let dns_server: web::Data<Option<String>> = web::Data::new(None);
     let app = App::new()
+        .app_data(dns_server)
         .service(api)
         .wrap(setup_error_handlers_middleware())
         .wrap(setup_logging_middleware())
