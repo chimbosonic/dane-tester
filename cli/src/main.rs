@@ -1,9 +1,9 @@
 use clap::Parser;
 use dane::dns_name::DaneDnsName;
 use dane::fetch::DaneFetch;
-use openpgp_tester_lib::load::load_key;
 use miette::Report;
 use miette::Result;
+use openpgp_tester_lib::load::load_key;
 
 #[derive(Parser, Debug)]
 #[command(version, author, about, long_about = None)]
