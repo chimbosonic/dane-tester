@@ -32,7 +32,6 @@ impl EmailHash {
         let local_part = local_part.to_ascii_lowercase();
         hasher.update(local_part);
         let sha256_hash = hasher.finalize();
-        // Truncate to 28 octets (224 bits) per RFC 7929
         let truncated = &sha256_hash[..28];
         let hex_encoded = hex::encode(truncated);
         assert!(hex_encoded.len() == 56);
@@ -65,7 +64,6 @@ fn parse_email(email: &str) -> Result<(String, String), DaneDnsNameError> {
     Ok((local_part, domain_part))
 }
 
-/// DANE DNS name for OPENPGPKEY record lookup per RFC 7929
 #[derive(Debug)]
 pub struct DaneDnsName {
     /// The domain part of the email address
@@ -120,7 +118,6 @@ impl Display for DaneDnsName {
 mod tests {
     use super::*;
 
-    // RFC 7929 Section 7 test vector
     const DOMAIN_PART: &str = "example.com";
     const LOCAL_PART: &str = "hugh";
 
@@ -128,7 +125,6 @@ mod tests {
     fn email_hash_new() {
         let test_hash = EmailHash::new(LOCAL_PART);
         assert_eq!(test_hash.to_string().len(), 56);
-        // RFC 7929 Section 7: SHA-256 of "hugh" truncated to 28 octets, hex-encoded
         assert_eq!(
             test_hash.to_string(),
             "c93f1e400f26708f98cb19d936620da35eec8f72e57f9eec01c1afd6"

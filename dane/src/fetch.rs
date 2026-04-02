@@ -66,7 +66,6 @@ impl DaneFetch {
         #[cfg(feature = "tracing")]
         event!(Level::TRACE, "Looking up OPENPGPKEY record for: {}", fqdn);
 
-        // First pass: resolve without strict DNSSEC validation to get data
         let resolver = match dns_server {
             Some(ip) => {
                 let addr: IpAddr = ip.parse().expect("Invalid DNS_SERVER IP address");
@@ -121,7 +120,6 @@ impl DaneFetch {
             }
         }
 
-        // Second pass: check DNSSEC validation
         let dnssec_resolver = match dns_server {
             Some(ip) => {
                 let addr: IpAddr = ip.parse().expect("Invalid DNS_SERVER IP address");
