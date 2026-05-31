@@ -94,18 +94,35 @@ pub async fn get_dane(user_id: &str, dns_server: Option<&str>) -> DaneResult {
 
     let dane_fetch = dane::fetch::DaneFetch::fetch(&dane_dns_name, dns_server).await;
 
-    let key: Option<DaneKey> = match dane_fetch.data {
-        Some(ref data) => load::load_key(data.clone().into()).ok().map(DaneKey::from),
-        None => None,
-    };
+    DaneResult::from(dane_fetch, user_id.to_string(), dane_dns_name.fqdn)
+}
 
-    DaneResult {
-        user_id: user_id.to_string(),
-        dns_name: dane_dns_name.fqdn,
-        key,
-        errors: dane_fetch.errors.iter().map(DaneError::from).collect(),
-        successes: dane_fetch.successes.iter().map(DaneSuccess::from).collect(),
-        timestamp: dane_fetch.timestamp,
+impl DaneResult {
+    pub fn from(dane_fetch: dane::fetch::DaneFetch, user_id: String, dns_name: String) -> Self {
+        let mut errors: Vec<DaneError> = dane_fetch.errors.iter().map(DaneError::from).collect();
+
+        let key: Option<DaneKey> =
+            dane_fetch
+                .data
+                .and_then(|key_data| match load::load_key(key_data.into()) {
+                    Ok(key) => Some(DaneKey::from(key)),
+                    Err(err) => {
+                        errors.push(DaneError {
+                            name: "LoadKeyError".to_string(),
+                            message: format!("{err}"),
+                        });
+                        None
+                    }
+                });
+
+        DaneResult {
+            user_id,
+            dns_name,
+            key,
+            errors,
+            successes: dane_fetch.successes.iter().map(DaneSuccess::from).collect(),
+            timestamp: dane_fetch.timestamp,
+        }
     }
 }
 
@@ -133,6 +150,21 @@ impl DaneKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_dane_result_from_load_key_error() {
+        let dane_fetch = dane::fetch::DaneFetch {
+            data: Some(b"invalid_key".to_vec()),
+            errors: vec![],
+            successes: vec![],
+            timestamp: Utc::now(),
+        };
+        let result = DaneResult::from(dane_fetch, "user_id".to_string(), "dns_name".to_string());
+        assert!(result.key.is_none());
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].name, "LoadKeyError");
+        assert_eq!(result.errors[0].message, "Failed to parse key");
+    }
 
     #[test]
     fn test_dane_key_from() {
