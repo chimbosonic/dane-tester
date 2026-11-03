@@ -35,13 +35,17 @@ Options:
 
 ### `DNS_SERVER`
 
-Optionally override the system DNS resolver with a custom DNS server IP address.
+By default lookups are fully recursive: they start at the root servers and validate DNSSEC from the root trust anchor. This needs outbound UDP and TCP port 53 to any authoritative name server.
+
+The root server addresses come from IANA's root hints file, vendored at `dane/named.root` and embedded at build time. Refresh it with `make update-root-hints`.
+
+Optionally set `DNS_SERVER` to an IP address to forward lookups to that resolver instead. DNSSEC is still validated locally.
 
 ```bash
 $ DNS_SERVER=1.1.1.1 dane-tester -u user@example.com
 ```
 
-When unset, the system resolver (`/etc/resolv.conf`) is used. Port 53 is assumed.
+Port 53 is assumed.
 
 This works for both the CLI and the server.
 
@@ -69,7 +73,7 @@ Then run it with:
 docker run -it --rm -p 7070:7070 dane-tester
 ```
 
-To use a custom DNS server:
+To forward lookups to a DNS server instead of resolving recursively:
 ```bash
 docker run -it --rm -p 7070:7070 -e DNS_SERVER=1.1.1.1 dane-tester
 ```

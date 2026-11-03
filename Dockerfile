@@ -18,5 +18,4 @@ RUN chmod +x /opt/dane-tester-server
 WORKDIR /opt
 
 EXPOSE 7070
-ENV DNS_SERVER="86.54.11.100"
 ENTRYPOINT ["/opt/dane-tester-server"]

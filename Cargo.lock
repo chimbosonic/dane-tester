@@ -378,6 +378,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f8abc12baad266b1c8cec146854c195b5864b4221d4b2ca7296a7ae82d9e451"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1703,6 +1714,7 @@ version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f3da5255c95d5a716857d54b5b8f4e8d67c3484d3beaaaae2ce25063b3ba981"
 dependencies = [
+ "async-recursion",
  "cfg-if",
  "futures-util",
  "hickory-net",
@@ -1710,6 +1722,7 @@ dependencies = [
  "ipconfig",
  "ipnet",
  "jni",
+ "lru-cache",
  "moka",
  "ndk-context",
  "once_cell",
@@ -2714,7 +2727,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 [[package]]
 name = "openpgp-tester-lib"
 version = "0.1.0"
-source = "git+https://github.com/chimbosonic/openpgp-tester-shared-lib.git#17455289baa95e04ae6f8da1b55d38fe43a66c50"
+source = "git+https://github.com/chimbosonic/openpgp-tester-shared-lib.git#38aa34c1a99b03116eb9b95996beb4536548ab01"
 dependencies = [
  "anyhow",
  "bytes",

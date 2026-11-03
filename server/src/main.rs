@@ -110,10 +110,13 @@ async fn main() -> std::io::Result<()> {
 
     let dns_server = match std::env::var("DNS_SERVER") {
         Ok(dns_server) => {
-            log::info!("Using custom DNS server: {dns_server}");
+            log::info!("Using DNS forwarder: {dns_server}");
             Some(dns_server)
         }
-        Err(_) => None,
+        Err(_) => {
+            log::info!("Using recursive resolution from root servers");
+            None
+        }
     };
 
     let dns_server: web::Data<Option<String>> = web::Data::new(dns_server);

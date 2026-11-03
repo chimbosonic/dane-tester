@@ -342,20 +342,27 @@
                         <div class="kv">
                             <div class="k">DNS Name</div>
                             <div class="v">{{this.dns_name}}</div>
+                            <div class="k">Keys Found</div>
+                            <div class="v keys-count">{{len this.keys}}</div>
+                            {{#each this.keys}}
                             <div class="k">Fingerprint</div>
                             <div class="v fingerprint">
-                                {{this.key.fingerprint}}
+                                {{this.fingerprint}}
                             </div>
                             <div class="k">Algorithm</div>
-                            <div class="v">{{this.key.algorithm}}</div>
+                            <div class="v">{{this.algorithm}}</div>
                             <div class="k">Revocation</div>
-                            <div class="v">{{this.key.revocation_status}}</div>
+                            <div class="v">{{this.revocation_status}}</div>
                             <div class="k">Expiry</div>
-                            <div class="v">{{this.key.expiry}}</div>
+                            <div class="v">{{this.expiry}}</div>
                             <div class="k">Randomart</div>
                             <div class="v">
-                                <pre>{{{this.key.randomart}}}</pre>
+                                <pre>{{{this.randomart}}}</pre>
                             </div>
+                            {{else}}
+                            <div class="k">Fingerprint</div>
+                            <div class="v">No keys found</div>
+                            {{/each}}
                             <div class="k">Passed Tests</div>
                             <div class="v">
                                 {{#if this.successes.[0]}}

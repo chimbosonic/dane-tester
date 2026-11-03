@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 pub struct DaneResult {
     user_id: String,
     dns_name: String,
-    key: Option<DaneKey>,
+    keys: Vec<DaneKey>,
     errors: Vec<DaneError>,
     successes: Vec<DaneSuccess>,
     #[schema(value_type = String)]
@@ -84,7 +84,7 @@ pub async fn get_dane(user_id: &str, dns_server: Option<&str>) -> DaneResult {
             return DaneResult {
                 user_id: user_id.to_string(),
                 dns_name: "".to_string(),
-                key: None,
+                keys: vec![],
                 errors: vec![DaneError::from(&err)],
                 successes: vec![],
                 timestamp: Utc::now(),
@@ -101,24 +101,32 @@ impl DaneResult {
     pub fn from(dane_fetch: dane::fetch::DaneFetch, user_id: String, dns_name: String) -> Self {
         let mut errors: Vec<DaneError> = dane_fetch.errors.iter().map(DaneError::from).collect();
 
-        let key: Option<DaneKey> =
-            dane_fetch
-                .data
-                .and_then(|key_data| match load::load_key(key_data.into()) {
-                    Ok(key) => Some(DaneKey::from(key)),
-                    Err(err) => {
+        let mut keys: Vec<DaneKey> = Vec::new();
+        for record in dane_fetch.data {
+            match load::load_keys(record.into()) {
+                Ok(record_keys) => {
+                    if record_keys.len() > 1 {
                         errors.push(DaneError {
-                            name: "LoadKeyError".to_string(),
-                            message: format!("{err}"),
+                            name: "MultipleKeysInRecord".to_string(),
+                            message: format!(
+                                "OPENPGPKEY record contains {} keys; RFC 7929 section 2 requires exactly one key per record",
+                                record_keys.len()
+                            ),
                         });
-                        None
                     }
-                });
+                    keys.extend(record_keys.into_iter().map(DaneKey::from));
+                }
+                Err(err) => errors.push(DaneError {
+                    name: "LoadKeyError".to_string(),
+                    message: format!("{err}"),
+                }),
+            }
+        }
 
         DaneResult {
             user_id,
             dns_name,
-            key,
+            keys,
             errors,
             successes: dane_fetch.successes.iter().map(DaneSuccess::from).collect(),
             timestamp: dane_fetch.timestamp,
@@ -151,19 +159,69 @@ impl DaneKey {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_dane_result_from_load_key_error() {
-        let dane_fetch = dane::fetch::DaneFetch {
-            data: Some(b"invalid_key".to_vec()),
+    fn dane_fetch_with(data: Vec<Vec<u8>>) -> dane::fetch::DaneFetch {
+        dane::fetch::DaneFetch {
+            data,
             errors: vec![],
             successes: vec![],
             timestamp: Utc::now(),
-        };
+        }
+    }
+
+    #[test]
+    fn test_dane_result_from_load_key_error() {
+        let dane_fetch = dane_fetch_with(vec![b"invalid_key".to_vec()]);
         let result = DaneResult::from(dane_fetch, "user_id".to_string(), "dns_name".to_string());
-        assert!(result.key.is_none());
+        assert!(result.keys.is_empty());
         assert_eq!(result.errors.len(), 1);
         assert_eq!(result.errors[0].name, "LoadKeyError");
         assert_eq!(result.errors[0].message, "Failed to parse key");
+    }
+
+    #[test]
+    fn test_dane_result_from_multiple_records() {
+        let dane_fetch = dane_fetch_with(vec![
+            std::fs::read("../test_files/test_key").unwrap(),
+            std::fs::read("../test_files/test_expired_key").unwrap(),
+        ]);
+        let result = DaneResult::from(dane_fetch, "user_id".to_string(), "dns_name".to_string());
+        assert!(result.errors.is_empty());
+        assert_eq!(result.keys.len(), 2);
+        assert_eq!(
+            result.keys[0].fingerprint,
+            "AC48BC1F029B6188D97E2D807C855DB4466DF0C6"
+        );
+        assert_eq!(
+            result.keys[1].fingerprint,
+            "A03351F7677A6D0B94F224A636CB3789EAC25E50"
+        );
+    }
+
+    #[test]
+    fn test_dane_result_from_record_with_multiple_keys() {
+        let dane_fetch = dane_fetch_with(vec![
+            std::fs::read("../test_files/test_multiple_keys").unwrap(),
+        ]);
+        let result = DaneResult::from(dane_fetch, "user_id".to_string(), "dns_name".to_string());
+        assert_eq!(result.keys.len(), 2);
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].name, "MultipleKeysInRecord");
+        assert_eq!(
+            result.errors[0].message,
+            "OPENPGPKEY record contains 2 keys; RFC 7929 section 2 requires exactly one key per record"
+        );
+    }
+
+    #[test]
+    fn test_dane_result_from_valid_and_invalid_records() {
+        let dane_fetch = dane_fetch_with(vec![
+            b"invalid_key".to_vec(),
+            std::fs::read("../test_files/test_key").unwrap(),
+        ]);
+        let result = DaneResult::from(dane_fetch, "user_id".to_string(), "dns_name".to_string());
+        assert_eq!(result.keys.len(), 1);
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].name, "LoadKeyError");
     }
 
     #[test]
@@ -196,7 +254,7 @@ mod tests {
         let dane_result = get_dane("something", None).await;
         assert_eq!(dane_result.user_id, "something");
         assert_eq!(dane_result.dns_name, "");
-        assert!(dane_result.key.is_none());
+        assert!(dane_result.keys.is_empty());
         assert!(!dane_result.errors.is_empty());
     }
 

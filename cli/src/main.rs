@@ -3,7 +3,7 @@ use dane::dns_name::DaneDnsName;
 use dane::fetch::DaneFetch;
 use miette::Report;
 use miette::Result;
-use openpgp_tester_lib::load::load_key;
+use openpgp_tester_lib::load::load_keys;
 
 #[derive(Parser, Debug)]
 #[command(version, author, about, long_about = None)]
@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     let dns_server = std::env::var("DNS_SERVER").ok();
     let dane_fetch = DaneFetch::fetch(&dane_dns_name, dns_server.as_deref()).await;
 
-    if dane_fetch.data.is_none() {
+    if dane_fetch.data.is_empty() {
         println!("DANE lookup failed with following errors:");
         for error in dane_fetch.errors {
             println!("{:?}", Report::new(error));
@@ -45,17 +45,27 @@ async fn main() -> Result<()> {
         println!(" - {success:?} Passed")
     }
 
-    if let Some(data) = dane_fetch.data {
-        match load_key(data.into()) {
-            Ok(key) => {
-                println!("Key fingerprint: {}", key.fingerprint);
-                println!("Revocation status: {}", key.revocation_status);
-                println!("Expiry status: {}", key.expiry);
-                println!("Algorithm: {}", key.algorithm);
-                println!("Randomart:\n{}", key.randomart);
+    for (index, data) in dane_fetch.data.into_iter().enumerate() {
+        let record = index + 1;
+        match load_keys(data.into()) {
+            Ok(keys) => {
+                if keys.len() > 1 {
+                    println!(
+                        "Record {record} contains {} keys; RFC 7929 section 2 requires exactly one key per record",
+                        keys.len()
+                    );
+                }
+                for key in keys {
+                    println!("Record {record} key:");
+                    println!("Key fingerprint: {}", key.fingerprint);
+                    println!("Revocation status: {}", key.revocation_status);
+                    println!("Expiry status: {}", key.expiry);
+                    println!("Algorithm: {}", key.algorithm);
+                    println!("Randomart:\n{}", key.randomart);
+                }
             }
             Err(error) => {
-                println!("Key loading failed with following errors:");
+                println!("Record {record} key loading failed with following errors:");
                 println!("{:?}", Report::new(error));
             }
         };
