@@ -6,8 +6,8 @@ use thiserror::Error;
 
 use hickory_proto::rr::{RData, RecordType};
 use hickory_resolver::Resolver;
-use hickory_resolver::config::{NameServerConfigGroup, ResolverConfig, ResolverOpts};
-use hickory_resolver::name_server::TokioConnectionProvider;
+use hickory_resolver::config::{NameServerConfig, ResolverConfig, ResolverOpts};
+use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use std::net::IpAddr;
 
 #[cfg(feature = "tracing")]
@@ -69,13 +69,16 @@ impl DaneFetch {
         let resolver = match dns_server {
             Some(ip) => {
                 let addr: IpAddr = ip.parse().expect("Invalid DNS_SERVER IP address");
-                let ns = NameServerConfigGroup::from_ips_clear(&[addr], 53, true);
+                let ns = vec![NameServerConfig::udp_and_tcp(addr)];
                 let config = ResolverConfig::from_parts(None, vec![], ns);
-                Resolver::builder_with_config(config, TokioConnectionProvider::default()).build()
+                Resolver::builder_with_config(config, TokioRuntimeProvider::default())
+                    .build()
+                    .expect("Failed to build DNS resolver")
             }
             None => Resolver::builder_tokio()
                 .expect("Failed to create DNS resolver")
-                .build(),
+                .build()
+                .expect("Failed to build DNS resolver"),
         };
 
         match resolver.lookup(fqdn.as_str(), RecordType::OPENPGPKEY).await {
@@ -88,9 +91,10 @@ impl DaneFetch {
                 event!(Level::TRACE, "DNS resolution succeeded for: {}", fqdn);
 
                 let records: Vec<Vec<u8>> = lookup
-                    .record_iter()
-                    .filter_map(|record| match record.data() {
-                        RData::OPENPGPKEY(key) => Some(key.public_key().to_vec()),
+                    .answers()
+                    .iter()
+                    .filter_map(|record| match &record.data {
+                        RData::OPENPGPKEY(key) => Some(key.public_key.clone()),
                         _ => None,
                     })
                     .collect();
@@ -123,15 +127,16 @@ impl DaneFetch {
         let dnssec_resolver = match dns_server {
             Some(ip) => {
                 let addr: IpAddr = ip.parse().expect("Invalid DNS_SERVER IP address");
-                let ns = NameServerConfigGroup::from_ips_clear(&[addr], 53, true);
+                let ns = vec![NameServerConfig::udp_and_tcp(addr)];
                 let config = ResolverConfig::from_parts(None, vec![], ns);
-                Resolver::builder_with_config(config, TokioConnectionProvider::default())
+                Resolver::builder_with_config(config, TokioRuntimeProvider::default())
                     .with_options({
                         let mut opts = ResolverOpts::default();
                         opts.validate = true;
                         opts
                     })
                     .build()
+                    .expect("Failed to build DNSSEC resolver")
             }
             None => Resolver::builder_tokio()
                 .expect("Failed to create DNSSEC resolver")
@@ -140,7 +145,8 @@ impl DaneFetch {
                     opts.validate = true;
                     opts
                 })
-                .build(),
+                .build()
+                .expect("Failed to build DNSSEC resolver"),
         };
 
         match dnssec_resolver

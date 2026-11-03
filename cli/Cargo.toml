@@ -12,9 +12,9 @@ name = "dane-tester"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.6.6", features = ["derive"] }
+clap = { version = "4.6.7", features = ["derive"] }
 miette = { version = "7.6.0", features = ["fancy"] }
 dane = { path = "../dane" }
 openpgp-tester-lib = {git = "https://github.com/chimbosonic/openpgp-tester-shared-lib.git"}
-tokio = { version = "1.53.1", features = ["full"] }
-thiserror = "2.0.20"
+tokio = { version = "1.54.1", features = ["full"] }
+thiserror = "2.0.21"
